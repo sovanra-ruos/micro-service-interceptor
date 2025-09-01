@@ -1,0 +1,175 @@
+spring:
+  application:
+    name: gateway-service
+  security:
+    oauth2:
+      client:
+        provider:
+          devops:
+            issuer-uri: http://localhost:8080
+        registration:
+          devops:
+            provider: devops
+            client-id: devops
+            client-secret: Qwerty@2024
+            authorization-grant-type: authorization_code
+            scope: openid,profile,email
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            client-authentication-method: client_secret_basic
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8080
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+        - SaveSession
+        - TokenRelay
+        - name: Header
+      routes:
+        # Identity service (no interceptor needed for auth)
+        - id: identity-service
+          uri: lb://identity-service
+          predicates:
+            - Path=/identity/**
+          filters:
+            - RewritePath=/identity/(?<segment>.*), /${segment}
+            - TokenRelay
+            - AddRequestHeader=X-Target-Service, identity-service
+
+        # Helper service direct access
+        - id: helper-service
+          uri: lb://helper-service
+          predicates:
+            - Path=/interceptor/**
+          filters:
+            - RewritePath=/interceptor/(?<segment>.*), /${segment}
+            - TokenRelay
+            - AddRequestHeader=X-Target-Service, helper-service
+
+        # === ROUTES VIA INTERCEPTOR ===
+        - id: product-service-via-interceptor
+          uri: lb://helper-service
+          predicates:
+            - Path=/products/**
+          filters:
+            - RewritePath=/products/(?<segment>.*), /api/v1/proxy/product-service/${segment}
+            - TokenRelay
+            - AddRequestHeader=X-Via-Interceptor, true
+
+#        - id: order-service-via-interceptor
+#          uri: lb://helper-service
+#          predicates:
+#            - Path=/orders/**
+#          filters:
+#            - RewritePath=/orders/(?<segment>.*), /api/v1/proxy/order-service/${segment}
+#            - TokenRelay
+#            - AddRequestHeader=X-Via-Interceptor, true
+#
+#        - id: notification-service-via-interceptor
+#          uri: lb://helper-service
+#          predicates:
+#            - Path=/notifications/**
+#          filters:
+#            - RewritePath=/notifications/(?<segment>.*), /api/v1/proxy/notification-service/${segment}
+#            - TokenRelay
+#            - AddRequestHeader=X-Via-Interceptor, true
+#
+#        - id: user-service-via-interceptor
+#          uri: lb://helper-service
+#          predicates:
+#            - Path=/users/**
+#          filters:
+#            - RewritePath=/users/(?<segment>.*), /api/v1/proxy/user-service/${segment}
+#            - TokenRelay
+#            - AddRequestHeader=X-Via-Interceptor, true
+
+        # === DIRECT ROUTES (for testing/bypass) ===
+        - id: product-service-direct
+          uri: lb://product-service
+          predicates:
+            - Path=/products-direct/**
+          filters:
+            - RewritePath=/products-direct/(?<segment>.*), /api/v1/products/${segment}
+            - TokenRelay
+            - AddRequestHeader=X-Direct-Access, true
+
+#        - id: order-service-direct
+#          uri: lb://order-service
+#          predicates:
+#            - Path=/orders-direct/**
+#          filters:
+#            - RewritePath=/orders-direct/(?<segment>.*), /api/v1/orders/${segment}
+#            - TokenRelay
+#            - AddRequestHeader=X-Direct-Access, true
+#
+#        - id: notification-service-direct
+#          uri: lb://notification-service
+#          predicates:
+#            - Path=/notifications-direct/**
+#          filters:
+#            - RewritePath=/notifications-direct/(?<segment>.*), /api/v1/notifications/${segment}
+#            - TokenRelay
+#            - AddRequestHeader=X-Direct-Access, true
+#
+#        - id: user-service-direct
+#          uri: lb://user-service
+#          predicates:
+#            - Path=/users-direct/**
+#          filters:
+#            - RewritePath=/users-direct/(?<segment>.*), /api/v1/users/${segment}
+#            - TokenRelay
+#            - AddRequestHeader=X-Direct-Access, true
+
+
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOriginPatterns: "*"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+            allowCredentials: true
+
+server:
+  port: 8081
+
+eureka:
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${server.port}
+    lease-renewal-interval-in-seconds: 30
+    lease-expiration-duration-in-seconds: 90
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    healthcheck:
+      enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway,metrics
+  endpoint:
+    health:
+      show-details: always
+    gateway:
+      enabled: true
+
+logging:
+  level:
+    org.springframework.security: INFO
+    org.springframework.security.oauth2: DEBUG
+    org.springframework.cloud.gateway: DEBUG
+    istad.co.gateway: DEBUG

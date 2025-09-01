@@ -1,0 +1,74 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: helper-service
+
+services:
+  targets:
+    product-service:
+      url: http://product-service
+      base-path: /api/v1/products
+      timeout: 30
+      requires-auth: true
+      allowed-methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+    order-service:
+      url: http://order-service
+      base-path: /api/v1/orders
+      timeout: 45
+      requires-auth: true
+      allowed-methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - PATCH
+    notification-service:
+      url: http://notification-service
+      base-path: /api/v1/notifications
+      timeout: 20
+      requires-auth: true
+      allowed-methods:
+        - GET
+        - POST
+        - DELETE
+    user-service:
+      url: http://user-service
+      base-path: /api/v1/users
+      timeout: 25
+      requires-auth: true
+      allowed-methods:
+        - GET
+        - POST
+        - PUT
+        - PATCH
+
+eureka:
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${server.port}
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    notification.com.helperservice: DEBUG
+    org.springframework.web: INFO
+    root: INFO
