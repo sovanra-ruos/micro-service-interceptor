@@ -66,5 +66,5 @@ logging:
   level:
     org.springframework.security: INFO
     org.springframework.security.oauth2: DEBUG
-    istad.co.identity: DEBUG
+    notification.com.identity: DEBUG
     org.hibernate.SQL: DEBUG

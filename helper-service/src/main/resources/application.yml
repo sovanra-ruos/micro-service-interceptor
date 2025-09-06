@@ -4,6 +4,16 @@ server:
 spring:
   application:
     name: helper-service
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/helper_service_db
+      # Alternative configuration for custom settings:
+      # host: localhost
+      # port: 27017
+      # database: helper_service_db
+      # authentication-database: admin
+      # username: ${MONGO_USERNAME:}
+      # password: ${MONGO_PASSWORD:}
 
 services:
   targets:

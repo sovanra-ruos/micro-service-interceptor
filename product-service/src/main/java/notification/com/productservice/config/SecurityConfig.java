@@ -41,7 +41,6 @@ public class SecurityConfig {
                                 "/actuator/**",
                                 "/error"
                         ).permitAll()
-                        .requestMatchers("GET", "/api/v1/products/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
